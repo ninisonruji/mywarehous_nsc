@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Order Products</title>
+  <h2>RoboMaster IP</h2>
+  <form action="">
+    <label for="robot-ip">IP Address:</label>
+    <input type="text" id="robot-ip" name="robot-ip" value="192.168.2.36" />
+    <button type="submit">Update</button>
+  </form>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    .product-container {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .product {
+      border: 1px solid #ccc;
+      padding: 20px;
+      width: 150px;
+      background-color: #f9f9f9;
+    }
+    .product button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px;
+      border: none;
+      cursor: pointer;
+    }
+    .product button:hover {
+      background-color: #45a049;
+    }
+    #response {
+      margin-top: 30px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Select a Product</h1>
+  <div class="product-container">
+    {% for code, name, stock in products %}
+    <div class="product">
+      <h3>{{ name }}</h3>
+      <p>Stock: <span id="stock-{{ code }}">{{ stock }}</span></p>
+      <button onclick="orderProduct('{{ code }}')" {% if stock == 0 %}disabled{% endif %}>
+        Order {{ code }}
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="response"></div>
+
+  <script>
+    function orderProduct(productCode) {
+      fetch("/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product: productCode })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.result && data.result.marker_id !== undefined) {
+          document.getElementById("response").innerText =
+            `✅ สั่งสินค้า ${productCode} สำเร็จ → ไปยัง Marker ID: ${data.result.marker_id}`;
+
+          // อัปเดต stock 
+          const stockSpan = document.getElementById(`stock-${productCode}`);
+          let currentStock = parseInt(stockSpan.innerText);
+          if (currentStock > 0) {
+            stockSpan.innerText = currentStock - 1;
+          }
+
+          if (currentStock - 1 <= 0) {
+            const btn = stockSpan.nextElementSibling;
+            if (btn) btn.disabled = true;
+          }
+        } else {
+          document.getElementById("response").innerText =
+            `❌ ไม่พบรหัสสินค้านี้: ${productCode}`;
+        }
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        document.getElementById("response").innerText = "❌ เกิดข้อผิดพลาดในการสั่งสินค้า";
+      });
+    }
+  </script>
+</body>
+</html>
